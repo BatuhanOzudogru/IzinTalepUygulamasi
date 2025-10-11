@@ -1,0 +1,29 @@
+﻿@using IzinTalepUygulamasi.Models.ViewModels
+@model LoginViewModel
+
+
+
+<form asp-action="Login" method="post" class="w-50 mx-auto mt-4">
+    <div class="mb-3">
+        <label asp-for="Username" class="form-label">Kullanıcı Adı</label>
+        <input asp-for="Username" class="form-control" placeholder="Kullanıcı adınızı girin" />
+        <span asp-validation-for="Username" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Password" class="form-label">Şifre</label>
+        <input asp-for="Password" type="password" class="form-control" placeholder="Şifrenizi girin" />
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <button type="submit" class="btn btn-primary w-100">Giriş Yap</button>
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-danger mt-3 text-center">@ViewBag.Error</div>
+    }
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
