@@ -1,5 +1,6 @@
 ﻿using IzinTalepUygulamasi.Models;
 using IzinTalepUygulamasi.Models.ViewModels;
+using IzinTalepUygulamasi.Services.Abstract;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,11 @@ namespace IzinTalepUygulamasi.Controllers
 {
     public class AccountController : Controller
     {
+        private readonly IAuthService _authService;
+        public AccountController(IAuthService authService)
+        {
+            _authService = authService;
+        }
         public IActionResult Index()
         {
             return View();
@@ -26,34 +32,14 @@ namespace IzinTalepUygulamasi.Controllers
             {
                 return View(model); 
             }
-            User? user = null;
-            if (model.Username == "manager1" && model.Password == "123")
-            {
-                user = new User { Id = 1, FullName = "manager1 manager", Username = "manager1", Role = "Manager" };
-            }
-            else if (model.Username == "employee1" && model.Password == "123")
-            {
-                user = new User { Id = 2, FullName = "employee1 employee", Username = "employee1", Role = "Employee" };
-            }
-            else if (model.Username == "employee2" && model.Password == "123")
-            {
-                user = new User { Id = 3, FullName = "employee2 employee", Username = "employee2", Role = "Employee" };
-            }
+            
+            var user = _authService.ValidateUser(model.Username, model.Password);
 
             if (user != null)
             {
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.Username),
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Role, user.Role),
-                    new Claim("FullName", user.FullName)
-                };
+                var principal = _authService.CreateClaimsPrincipal(user);
 
-                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal);
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
                 return RedirectToAction("Index", "Home");
             }

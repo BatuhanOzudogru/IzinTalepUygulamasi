@@ -1,3 +1,5 @@
+using IzinTalepUygulamasi.Services.Abstract;
+using IzinTalepUygulamasi.Services.Concrete;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +10,8 @@ builder.Services.AddDbContext<IzinTalepUygulamasi.Data.ApplicationDbContext>(opt
 builder.Services.AddAuthorization();
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
