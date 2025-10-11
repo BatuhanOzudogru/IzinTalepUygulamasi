@@ -1,0 +1,44 @@
+﻿<nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+    <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+        <ul class="navbar-nav flex-grow-1">
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+            </li>
+
+            @if (User.Identity != null && User.Identity.IsAuthenticated)
+            {
+
+                if (User.IsInRole("Employee"))
+                {
+                    <li class="nav-item">
+                        <a class="nav-link text-dark" asp-controller="LeaveRequest" asp-action="Create">Yeni Talep Oluştur</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-dark" asp-controller="LeaveRequest" asp-action="Index">İzin Taleplerim</a>
+                    </li>
+                }
+            }
+        </ul>
+
+        <ul class="navbar-nav">
+            @if (User.Identity != null && User.Identity.IsAuthenticated)
+            {
+                <li class="nav-item">
+                    <span class="navbar-text me-2">Hoşgeldiniz, @User.FindFirst("FullName")?.Value</span>
+                </li>
+                <li class="nav-item">
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-link nav-link" style="display:inline; padding:0;">Logout</button>
+                    </form>
+                </li>
+            }
+            else
+            {
+                <li class="nav-item">
+                    <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a>
+                </li>
+            }
+        </ul>
+    </div>
+
+</nav>
