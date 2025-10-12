@@ -1,0 +1,47 @@
+﻿@model LeaveRequest
+
+@{
+    ViewData["Title"] = "Talebi Sil";
+}
+
+<h1>@ViewData["Title"]</h1>
+<h3>Bu izin talebini silmek istediğinizden emin misiniz?</h3>
+<div>
+    <hr />
+    <dl class="row">
+        <dt class = "col-sm-3">İzin Türü</dt>
+        <dd class = "col-sm-9">@Html.DisplayFor(model => model.LeaveType)</dd>
+        <dt class = "col-sm-3">Başlangıç Tarihi</dt>
+        <dd class = "col-sm-9">@Model.StartDate.ToShortDateString()</dd>
+        <dt class = "col-sm-3">Bitiş Tarihi</dt>
+        <dd class = "col-sm-9">@Model.EndDate.ToShortDateString()</dd>
+    </dl>
+    
+    <input type="button" value="Evet, Sil" class="btn btn-danger" id="deleteBtn" /> |
+    <a asp-action="Index">Geri Dön</a>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#deleteBtn').on('click', function () {
+            var $btn = $(this);
+            $btn.prop('disabled', true);
+
+            var leaveRequestId = '@Model.Id';
+
+            $.ajax({
+                url: `/LeaveRequest/Delete/${leaveRequestId}`,
+                type: 'DELETE',
+                success: function () {
+                    window.location.href = '/LeaveRequest/Index';
+                },
+                error: function (xhr, status, error) {
+                    console.error('Hata:', error);
+                    alert('Bir hata oluştu. Talep silinemedi.');
+                    $btn.prop('disabled', false);
+                }
+            });
+        });
+    });
+</script>

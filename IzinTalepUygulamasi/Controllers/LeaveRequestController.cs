@@ -97,10 +97,178 @@ namespace IzinTalepUygulamasi.Controllers
                 await _context.LeaveRequests.AddAsync(leaveRequest);
                 await _context.SaveChangesAsync();
 
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Index", "LeaveRequest");
             }
 
             return View(model);
+        }
+
+        [Authorize(Roles = "Employee")]
+        [HttpGet]
+        public async Task<IActionResult> Edit(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var request = await _context.LeaveRequests.FindAsync(id);
+
+            if (request==null)
+            {
+                return NotFound();
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var requestingEmployeeId = int.Parse(userId);
+
+            if(request.RequestingEmployeeId != requestingEmployeeId)
+            {
+                return Forbid();
+            }
+
+            if (request.Status != RequestStatus.PENDING)
+            {
+                TempData["ErrorMessage"] = "Sadece 'Beklemede' olan talepler düzenlenebilir.";
+                return RedirectToAction("Index");
+            }
+            var model = new LeaveRequestCreateViewModel
+            {
+                LeaveType = request.LeaveType,
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
+                Reason = request.Reason
+            };
+
+            return View(model);
+        }
+
+        [Authorize(Roles = "Employee")]
+        [HttpPost]
+        public async Task<IActionResult> Edit(int id, LeaveRequestCreateViewModel model)
+        {
+            var leaveRequestToUpdate = await _context.LeaveRequests.FindAsync(id);
+
+            if (leaveRequestToUpdate == null)
+            {
+                return NotFound();
+            }
+            var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            if (leaveRequestToUpdate.RequestingEmployeeId != currentUserId)
+            {
+                return Forbid();
+            }
+
+            if (leaveRequestToUpdate.Status != RequestStatus.PENDING)
+            {
+                ModelState.AddModelError("", "Bu talep artık düzenlenemez.");
+                return View(model);
+            }
+
+            if (ModelState.IsValid)
+            {
+
+                if (model.EndDate < model.StartDate)
+                {
+                    ModelState.AddModelError("EndDate", "Bitiş tarihi başlangıç tarihinden önce olamaz. Lütfen tarihleri kontrol edin.");
+                    return View(model);
+                }
+                DateTime earliestAllowedDate = DateTime.Now.Date.AddDays(-7);
+
+                if (model.StartDate.Date < earliestAllowedDate)
+                {
+                    ModelState.AddModelError("StartDate", "Başlangıç tarihi bugünden en fazla 7 gün öncesi olabilir.");
+                    return View(model);
+                }
+
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var requestingEmployeeId = int.Parse(userId);
+
+                var employeesRequests = await _context.LeaveRequests.Where(lr => lr.Id != id &&  lr.RequestingEmployeeId == requestingEmployeeId &&
+                (lr.Status == RequestStatus.PENDING || lr.Status == RequestStatus.APPROVED)).ToListAsync();
+
+
+                var overlap = employeesRequests.Any(r =>
+                model.StartDate <= r.EndDate && model.EndDate >= r.StartDate);
+
+                if (overlap)
+                {
+                    ModelState.AddModelError("", "Bu tarihler arasında bekleyen veya onaylanmış başka bir izniniz bulunmakta.");
+                    return View(model);
+                }
+
+                leaveRequestToUpdate.LeaveType = model.LeaveType;
+                leaveRequestToUpdate.StartDate = model.StartDate;
+                leaveRequestToUpdate.EndDate = model.EndDate;
+                leaveRequestToUpdate.Reason = model.Reason;
+                leaveRequestToUpdate.UpdatedAt = DateTime.Now;
+                leaveRequestToUpdate.UpdatedBy = User.Identity.Name;
+
+                try
+                {
+                    _context.Update(leaveRequestToUpdate);
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    ModelState.AddModelError("", "Değişiklikler kaydedilemedi. Lütfen tekrar deneyin.");
+                    return View(model);
+                }
+                return RedirectToAction("Index");
+            }
+            return View(model);
+        }
+
+
+        [Authorize(Roles = "Employee")]
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+            var leaveRequest = await _context.LeaveRequests.FirstOrDefaultAsync(m => m.Id == id);
+
+            if (leaveRequest == null) 
+            {
+                return NotFound();
+            }
+            var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            if (leaveRequest.RequestingEmployeeId != currentUserId)
+            {
+                return Forbid();
+            }
+
+            if (leaveRequest.Status != RequestStatus.PENDING)
+            {
+                TempData["ErrorMessage"] = "Sadece 'Beklemede' olan talepler silinebilir.";
+                return RedirectToAction("Index");
+            }
+
+            return View(leaveRequest);
+        }
+
+
+        [HttpDelete]
+        [Authorize(Roles = "Employee")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var leaveRequest = await _context.LeaveRequests.FindAsync(id);
+            if (leaveRequest==null)
+            {
+                return NotFound(new { success = false, message = "Kayıt bulunamadı." });
+            }
+            
+            var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            if (leaveRequest.RequestingEmployeeId != currentUserId || leaveRequest.Status != RequestStatus.PENDING)
+            {
+                return Forbid();
+            }
+
+            _context.LeaveRequests.Remove(leaveRequest);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Talep başarıyla silindi." });
         }
     }
 }
