@@ -50,8 +50,36 @@ namespace IzinTalepUygulamasi.Controllers
         {
             if (ModelState.IsValid)
             {
+
+                if(model.EndDate < model.StartDate)
+                {
+                    ModelState.AddModelError("EndDate", "Bitiş tarihi başlangıç tarihinden önce olamaz. Lütfen tarihleri kontrol edin.");
+                    return View(model);
+                }
+                DateTime earliestAllowedDate = DateTime.Now.Date.AddDays(-7);
+
+                if (model.StartDate.Date < earliestAllowedDate)
+                {
+                    ModelState.AddModelError("StartDate", "Başlangıç tarihi bugünden en fazla 7 gün öncesi olabilir.");
+                    return View(model);
+                }
+
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var requestingEmployeeId = int.Parse(userId);
+
+                var employeesRequests = await _context.LeaveRequests.Where(lr => lr.RequestingEmployeeId == requestingEmployeeId &&
+                (lr.Status == RequestStatus.PENDING || lr.Status == RequestStatus.APPROVED)).ToListAsync();
+
+
+                var overlap = employeesRequests.Any(r =>
+                model.StartDate <= r.EndDate && model.EndDate >= r.StartDate);
+
+                if (overlap)
+                {
+                    ModelState.AddModelError("", "Bu tarihler arasında bekleyen veya onaylanmış izniniz bulunmakta. Tarihleri kontrol ediniz.");
+                    return View(model);
+                }
+
 
                 var leaveRequest = new LeaveRequest
                 {
