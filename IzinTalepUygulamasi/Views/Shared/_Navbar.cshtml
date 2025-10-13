@@ -17,6 +17,13 @@
                         <a class="nav-link text-dark" asp-controller="LeaveRequest" asp-action="Index">İzin Taleplerim</a>
                     </li>
                 }
+                else if (User.IsInRole("Manager"))
+                {
+                    <li class="nav-item">
+                        <a class="nav-link text-dark" asp-controller="Manager" asp-action="Index">Bekleyen Talepler</a>
+                    </li>
+                  
+                }
             }
         </ul>
 

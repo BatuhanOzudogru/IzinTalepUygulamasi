@@ -1,0 +1,42 @@
+﻿@model List<LeaveRequest>
+
+<h1>Onay Bekleyen İzin Talepleri</h1>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        Onay bekleyen herhangi bir izin talebi bulunmamaktadır.
+    </div>
+}
+else
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Çalışan Adı</th>
+                <th>Talep Tarihi</th>
+                <th>İzin Türü</th>
+                <th>Başlangıç - Bitiş Tarihi</th>
+                <th>İzin Süresi (Gün)</th>
+                <th>Açıklama</th>
+                <th>İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@Html.DisplayFor(modelItem => item.RequestingEmployee.FullName)</td>
+                    <td>@item.RequestDate.ToShortDateString()</td>
+                    <td>@Html.DisplayFor(modelItem => item.LeaveType)</td>
+                    <td>@item.StartDate.ToShortDateString() - @item.EndDate.ToShortDateString()</td>
+                    <td>@((item.EndDate - item.StartDate).TotalDays + 1)</td>
+                    <td>@Html.DisplayFor(modelItem => item.Reason)</td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">İncele</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
