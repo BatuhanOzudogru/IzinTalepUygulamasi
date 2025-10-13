@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using X.PagedList.Extensions;
 
 namespace IzinTalepUygulamasi.Controllers
 {
@@ -16,15 +17,39 @@ namespace IzinTalepUygulamasi.Controllers
         {
             _context = context;
         }
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string search,LeaveType? leaveTypeFilter,DateTime? startDateFilter,int page = 1)
         {
-            var pendingRequests = await _context.LeaveRequests
+            int pageSize = 10;
+
+            var pendingRequests = _context.LeaveRequests
                 .Include(lr => lr.RequestingEmployee)
                 .Where(lr => lr.Status == RequestStatus.PENDING)
-                .OrderBy(lr => lr.RequestDate)
-                .ToListAsync();
+                .OrderBy(lr => lr.RequestDate);
+             
 
-            return View(pendingRequests);
+            if (!string.IsNullOrEmpty(search))
+            {
+                pendingRequests = pendingRequests.Where(r =>
+                    r.RequestingEmployee.FullName.Contains(search) ||
+                    r.RequestingEmployee.Username.Contains(search)
+                ).OrderBy(lr => lr.RequestDate);
+            }
+            if (leaveTypeFilter.HasValue)
+            {
+                pendingRequests = pendingRequests.Where(r => r.LeaveType == leaveTypeFilter.Value).OrderBy(lr => lr.RequestDate);
+            }
+            if (startDateFilter.HasValue)
+            {
+                pendingRequests = pendingRequests.Where(r => r.StartDate.Date == startDateFilter.Value.Date).OrderBy(lr => lr.RequestDate);
+            }
+
+            var pagedRequests =  pendingRequests.ToPagedList(page, pageSize);
+
+            ViewBag.Search = search;
+            ViewBag.LeaveTypeFilter = (int?)leaveTypeFilter;
+            ViewBag.StartDateFilter = startDateFilter?.ToString("yyyy-MM-dd");
+
+            return View(pagedRequests);
         }
         public IActionResult Report()
         {
