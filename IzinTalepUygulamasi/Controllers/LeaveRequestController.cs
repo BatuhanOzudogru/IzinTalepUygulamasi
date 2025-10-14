@@ -51,19 +51,6 @@ namespace IzinTalepUygulamasi.Controllers
             if (ModelState.IsValid)
             {
 
-                if(model.EndDate < model.StartDate)
-                {
-                    ModelState.AddModelError("EndDate", "Bitiş tarihi başlangıç tarihinden önce olamaz. Lütfen tarihleri kontrol edin.");
-                    return View(model);
-                }
-                DateTime earliestAllowedDate = DateTime.Now.Date.AddDays(-7);
-
-                if (model.StartDate.Date < earliestAllowedDate)
-                {
-                    ModelState.AddModelError("StartDate", "Başlangıç tarihi bugünden en fazla 7 gün öncesi olabilir.");
-                    return View(model);
-                }
-
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var requestingEmployeeId = int.Parse(userId);
 
