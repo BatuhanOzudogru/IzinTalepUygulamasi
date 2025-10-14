@@ -12,9 +12,11 @@ namespace IzinTalepUygulamasi.Controllers
     public class LeaveRequestController : Controller
     {
         private readonly ApplicationDbContext _context;
-        public LeaveRequestController(ApplicationDbContext context)
+        private readonly ILogger<LeaveRequestController> _logger;
+        public LeaveRequestController(ApplicationDbContext context, ILogger<LeaveRequestController> logger)
         {
             _context = context;
+            _logger = logger;
         }
         public async Task<IActionResult> Index(string statusFilter) 
         {
@@ -48,6 +50,7 @@ namespace IzinTalepUygulamasi.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(LeaveRequestCreateViewModel model)
         {
+            var currentUserName = User.Identity?.Name ?? "Bilinmeyen Kullanıcı";
             if (ModelState.IsValid)
             {
 
@@ -64,6 +67,10 @@ namespace IzinTalepUygulamasi.Controllers
                 if (overlap)
                 {
                     ModelState.AddModelError("", "Bu tarihler arasında bekleyen veya onaylanmış izniniz bulunmakta. Tarihleri kontrol ediniz.");
+                    var error = string.Join(" | ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    _logger.LogWarning("Geçersiz izin talebi oluşturma denemesi. Kullanıcı: {User}, Hatalar: {Errors}",
+                        currentUserName,
+                        error);
                     return View(model);
                 }
 
@@ -83,9 +90,18 @@ namespace IzinTalepUygulamasi.Controllers
 
                 await _context.LeaveRequests.AddAsync(leaveRequest);
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Yeni izin talebi başarıyla oluşturuldu. Oluşturan: {User}, İzin Türü: {LeaveType}, Başlangıç: {StartDate}, Bitiş: {EndDate}",
+                    currentUserName,
+                    model.LeaveType,
+                    model.StartDate,
+                    model.EndDate);
 
                 return RedirectToAction("Index", "LeaveRequest");
             }
+            var errors = string.Join(" | ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+            _logger.LogWarning("Geçersiz izin talebi oluşturma denemesi. Kullanıcı: {User}, Hatalar: {Errors}",
+                currentUserName,
+                errors);
 
             return View(model);
         }
@@ -240,6 +256,7 @@ namespace IzinTalepUygulamasi.Controllers
         [Authorize(Roles = "Employee")]
         public async Task<IActionResult> Delete(int id)
         {
+            var currentUserName = User.Identity?.Name ?? "Bilinmeyen";
             var leaveRequest = await _context.LeaveRequests.FindAsync(id);
             if (leaveRequest==null)
             {
@@ -249,13 +266,28 @@ namespace IzinTalepUygulamasi.Controllers
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             if (leaveRequest.RequestingEmployeeId != currentUserId || leaveRequest.Status != RequestStatus.PENDING)
             {
-                return Forbid();
+                _logger.LogWarning("{User} tarafından ID'si {Id} olan talebe yetkisiz veya geçersiz silme denemesi yapıldı (AJAX).", currentUserName, id);
+                return new JsonResult(new { success = false, message = "Bu işlem yapılamaz." }) { StatusCode = 403 };
             }
 
-            _context.LeaveRequests.Remove(leaveRequest);
-            await _context.SaveChangesAsync();
+            
+            try
+            {
+                _context.LeaveRequests.Remove(leaveRequest);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("İzin talebi başarıyla silindi. Silen: {User}, Talep ID: {Id}", currentUserName, id);
+                return Ok(new { success = true, message = "Talep başarıyla silindi." });
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Talep silinirken beklenmedik bir hata oluştu. Talep ID: {Id}", id);
+                return new JsonResult(new { success = false, message = "Silme işlemi sırasında sunucuda bir hata oluştu." }) { StatusCode = 500 };
+            }
+            
 
-            return Ok(new { success = true, message = "Talep başarıyla silindi." });
+            
+
+            
         }
     }
 }

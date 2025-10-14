@@ -16,7 +16,7 @@ namespace IzinTalepUygulamasi.Validators
 
             RuleFor(x => x.EndDate)
                 .NotEmpty().WithMessage("Bitiş tarihi zorunludur.")
-                .GreaterThan(x => x.StartDate).WithMessage("Bitiş tarihi, başlangıç tarihinden önce olamaz.");
+                .GreaterThanOrEqualTo(x => x.StartDate).WithMessage("Bitiş tarihi, başlangıç tarihinden önce olamaz.");
 
             RuleFor(x => x.Reason)
                 .MaximumLength(500).WithMessage("Açıklama en fazla 500 karakter olabilir.");
