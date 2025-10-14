@@ -44,7 +44,7 @@ namespace IzinTalepUygulamasi.Controllers
                 return View(model); 
             }
             
-            var user = _authService.ValidateUser(model.Username, model.Password);
+            var user = await _authService.ValidateUser(model.Username, model.Password);
 
             if (user != null)
             {

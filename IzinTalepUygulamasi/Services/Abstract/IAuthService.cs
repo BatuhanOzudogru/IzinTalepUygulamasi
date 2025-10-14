@@ -5,7 +5,7 @@ namespace IzinTalepUygulamasi.Services.Abstract
 {
     public interface IAuthService
     {
-        User? ValidateUser(string username, string password);
+        Task<User?> ValidateUser(string username, string password);
         ClaimsPrincipal CreateClaimsPrincipal(User user);
     }
 }
