@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text;
 using X.PagedList.Extensions;
 
 namespace IzinTalepUygulamasi.Controllers
@@ -48,6 +49,25 @@ namespace IzinTalepUygulamasi.Controllers
             ViewBag.Search = search;
             ViewBag.LeaveTypeFilter = (int?)leaveTypeFilter;
             ViewBag.StartDateFilter = startDateFilter?.ToString("yyyy-MM-dd");
+
+            var firstDayOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+
+            ViewBag.ApprovedThisMonth = await _context.LeaveRequests
+                .Where(lr => lr.Status == RequestStatus.APPROVED && lr.UpdatedAt >= firstDayOfMonth && lr.UpdatedAt <= lastDayOfMonth)
+                .CountAsync();
+
+            ViewBag.PendingRequestsCount = await _context.LeaveRequests
+                .CountAsync(lr => lr.Status == RequestStatus.PENDING);
+
+            var mostUsedLeaveType = await _context.LeaveRequests
+                .Where(lr => lr.Status == RequestStatus.APPROVED)
+                .GroupBy(lr => lr.LeaveType)
+                .Select(g => new { LeaveType = g.Key, Count = g.Count() })
+                .OrderByDescending(g => g.Count)
+                .FirstOrDefaultAsync();
+
+            ViewBag.MostUsedLeaveType = mostUsedLeaveType != null ? mostUsedLeaveType.LeaveType.ToString() : "Veri Yok";
 
             return View(pagedRequests);
         }
@@ -146,6 +166,73 @@ namespace IzinTalepUygulamasi.Controllers
                     return View("Details", leaveRequest);
                 }
             }
+        }
+
+        public async Task<IActionResult> MonthlyReport(int? year, int? month)
+        {
+            int currentYear = year ?? DateTime.Now.Year;
+            int currentMonth = month ?? DateTime.Now.Month;
+
+            var startDate = new DateTime(currentYear, currentMonth, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+
+            var approvedLeaves = await _context.LeaveRequests
+                .Include(lr => lr.RequestingEmployee)
+                .Where(lr =>
+                    lr.Status == RequestStatus.APPROVED &&
+                    lr.StartDate >= startDate && lr.EndDate <= endDate)
+                .ToListAsync();
+
+            var reportData = approvedLeaves
+                .GroupBy(lr => lr.RequestingEmployee)
+                .Select(g => new
+                {
+                    Employee = g.Key,
+                    TotalDays = g.Sum(l => (l.EndDate - l.StartDate).TotalDays + 1)
+                })
+                .OrderBy(x => x.Employee.FullName)
+                .ToList();
+
+            ViewBag.Year = currentYear;
+            ViewBag.Month = currentMonth;
+            ViewBag.Years = Enumerable.Range(DateTime.Now.Year - 5, 10).ToList();
+            ViewBag.Months = Enumerable.Range(1, 12).ToList();
+
+            return View(reportData);
+        }
+
+        public async Task<IActionResult> DownloadMonthlyReportCsv(int? year, int? month)
+        {
+            int currentYear = year ?? DateTime.Now.Year;
+            int currentMonth = month ?? DateTime.Now.Month;
+            var startDate = new DateTime(currentYear, currentMonth, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+            var approvedLeaves = await _context.LeaveRequests
+                .Include(lr => lr.RequestingEmployee)
+                .Where(lr =>
+                lr.Status == RequestStatus.APPROVED && 
+                lr.StartDate >= startDate && lr.EndDate <= endDate)
+                .ToListAsync();
+            var reportData = approvedLeaves
+                .GroupBy(lr => lr.RequestingEmployee)
+                .Select(g => new
+                {
+                    Employee = g.Key,
+                    TotalDays = g.Sum(l => (l.EndDate - l.StartDate).TotalDays + 1)
+                })
+                .OrderBy(x => x.Employee.FullName)
+                .ToList();
+
+
+            var builder = new StringBuilder();
+            builder.AppendLine("Calisan Adi,Toplam Izin Gunu");
+
+            foreach (var item in reportData)
+            {
+                builder.AppendLine($"\"{item.Employee.FullName}\",{item.TotalDays}");
+            }
+
+            return File(Encoding.UTF8.GetBytes(builder.ToString()), "text/csv", $"AylikIzinRaporu_{currentYear}_{currentMonth}.csv");
         }
     }
 }

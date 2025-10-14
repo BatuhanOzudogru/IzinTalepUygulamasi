@@ -1,0 +1,50 @@
+﻿
+@model IEnumerable<dynamic>
+
+<form asp-action="MonthlyReport" method="get" class="row g-3 mb-4">
+    <div class="col-md-3">
+        <select name="year" class="form-select">
+            @foreach (var year in (List<int>)ViewBag.Years)
+            {
+                <option value="@year" selected="@(year == (int)ViewBag.Year)">@year</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select name="month" class="form-select">
+            @foreach (var month in (List<int>)ViewBag.Months)
+            {
+                <option value="@month" selected="@(month == (int)ViewBag.Month)">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary">Raporu Getir</button>
+    </div>
+    <div class="col-md-4">
+        <a class="btn btn-success"
+           asp-action="DownloadMonthlyReportCsv"
+           asp-route-year="@ViewBag.Year"
+           asp-route-month="@ViewBag.Month">
+            CSV Olarak İndir
+        </a>
+    </div>
+</form>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Çalışan Adı Soyadı</th>
+            <th>Toplam Onaylı İzin Günü</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Employee.FullName</td>
+                <td>@item.TotalDays</td>
+            </tr>
+        }
+    </tbody>
+</table>

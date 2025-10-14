@@ -4,6 +4,35 @@
 
 <h1>Onay Bekleyen İzin Talepleri</h1>
 
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Bu Ay Onaylanan İzin</div>
+            <div class="card-body">
+                <h5 class="card-title display-4">@ViewBag.ApprovedThisMonth</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-dark bg-warning mb-3">
+            <div class="card-header">Bekleyen Toplam Talep</div>
+            <div class="card-body">
+                <h5 class="card-title display-4">@ViewBag.PendingRequestsCount</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-header">En Popüler İzin Türü (Onaylı)</div>
+            <div class="card-body">
+                <h5 class="card-title display-4">@ViewBag.MostUsedLeaveType</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr />
+
 <form asp-action="Index" method="get" class="row g-3 mb-4">
     <div class="col-md-4">
         <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Çalışan Adı / Kullanıcı Adı Ara..." />
