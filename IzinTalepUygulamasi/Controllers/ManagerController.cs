@@ -13,10 +13,12 @@ namespace IzinTalepUygulamasi.Controllers
     public class ManagerController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<ManagerController> _logger;
 
-        public ManagerController(ApplicationDbContext context)
+        public ManagerController(ApplicationDbContext context, ILogger<ManagerController> logger)
         {
             _context = context;
+            _logger = logger;
         }
         public async Task<IActionResult> Index(string search,LeaveType? leaveTypeFilter,DateTime? startDateFilter,int page = 1)
         {
@@ -78,8 +80,10 @@ namespace IzinTalepUygulamasi.Controllers
 
         public async Task<IActionResult> Details (int? id)
         {
+            var managerName = User.Identity?.Name ?? "Bilinmeyen";
             if (id == null)
             {
+                _logger.LogWarning("Details action'ı ID olmadan çağrıldı.");
                 return NotFound();
             }
             var leaveRequest = await _context.LeaveRequests
@@ -88,9 +92,14 @@ namespace IzinTalepUygulamasi.Controllers
 
             if (leaveRequest == null)
             {
+                _logger.LogWarning("Yönetici {ManagerName}, bulunamayan bir talep (ID: {Id}) detaylarına erişmeye çalıştı.", managerName, id);
                 return NotFound();
             }
-
+            _logger.LogInformation("Yönetici {ManagerName}, {EmployeeName} adlı çalışana ait {Id} ID'li talebin detaylarını inceliyor.",
+                managerName,
+                leaveRequest.RequestingEmployee.FullName,
+                id);
+        
             return View(leaveRequest);
         }
 
@@ -98,7 +107,7 @@ namespace IzinTalepUygulamasi.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessRequest(int id, string decision, string managerComments, byte[] rowVersion)
         {
-
+            var managerName = User.Identity?.Name ?? "Bilinmeyen";
             var leaveRequest = await _context.LeaveRequests
                                         .Include(lr => lr.RequestingEmployee)
                                         .FirstOrDefaultAsync(lr => lr.Id == id);
@@ -119,7 +128,7 @@ namespace IzinTalepUygulamasi.Controllers
                 return View("Details", leaveRequest);
             }
 
-
+            _logger.LogInformation("Yönetici {ManagerName}, {Id} ID'li talebi işleme aldı. Talep edilen karar: {Decision}", managerName, id, decision);
 
             var managerId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
@@ -145,7 +154,7 @@ namespace IzinTalepUygulamasi.Controllers
                     await _context.SaveChangesAsync();
 
                     await transaction.CommitAsync();
-
+                    _logger.LogInformation("Talep ID {Id} başarıyla işlendi. Yeni Durum: {NewStatus}", id, leaveRequest.Status);
                     return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException ex)
@@ -153,8 +162,7 @@ namespace IzinTalepUygulamasi.Controllers
                     await transaction.RollbackAsync();
                     var entry = ex.Entries.Single();
                     var databaseValues = await entry.GetDatabaseValuesAsync();
-
-                    
+                    _logger.LogWarning(ex, "Concurrency hatası! Yönetici {ManagerName}, talep {Id}'yi işlerken başka bir işlem yapıldı.", managerName, id);
                     var databaseLeaveRequest = (LeaveRequest)databaseValues.ToObject();
                     ModelState.AddModelError(string.Empty, "Bu kayıt siz düzenlemeye başladıktan sonra başka bir yönetici tarafından güncellenmiş.");
                     return View("Details", leaveRequest);
@@ -162,6 +170,7 @@ namespace IzinTalepUygulamasi.Controllers
                 catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Talep işlenirken BEKLENMEDİK BİR HATA oluştu! Talep ID: {Id}, Yönetici: {ManagerName}", id, managerName);
                     ModelState.AddModelError(string.Empty, "İşlem sırasında beklenmedik bir hata oluştu: " + ex.Message);
                     return View("Details", leaveRequest);
                 }
@@ -198,6 +207,12 @@ namespace IzinTalepUygulamasi.Controllers
             ViewBag.Years = Enumerable.Range(DateTime.Now.Year - 5, 10).ToList();
             ViewBag.Months = Enumerable.Range(1, 12).ToList();
 
+            _logger.LogInformation(
+                "Yönetici {ManagerName}, {Year}-{Month} için aylık raporu görüntüledi.",
+                User.Identity?.Name,
+                year ?? DateTime.Now.Year,
+                month ?? DateTime.Now.Month);
+
             return View(reportData);
         }
 
@@ -223,6 +238,11 @@ namespace IzinTalepUygulamasi.Controllers
                 .OrderBy(x => x.Employee.FullName)
                 .ToList();
 
+            _logger.LogInformation(
+                "Yönetici {ManagerName}, {Year}-{Month} için aylık raporu CSV olarak indirdi.",
+                User.Identity?.Name,
+                year ?? DateTime.Now.Year,
+                month ?? DateTime.Now.Month);
 
             var builder = new StringBuilder();
             builder.AppendLine("Calisan Adi,Toplam Izin Gunu");
