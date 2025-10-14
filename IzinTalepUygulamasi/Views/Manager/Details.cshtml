@@ -25,7 +25,7 @@
         <dd class="col-sm-9">@((Model.EndDate - Model.StartDate).TotalDays + 1) gün</dd>
 
         <dt class="col-sm-3">Çalışanın Açıklaması</dt>
-        <dd class="col-sm-9">@Html.DisplayFor(model => model.Reason)</dd>
+        <dd class="col-sm-9 text-break" style="white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;">@Html.DisplayFor(model => model.Reason)</dd>
 
         <dt class="col-sm-3">Mevcut Durum</dt>
         <dd class="col-sm-9">
