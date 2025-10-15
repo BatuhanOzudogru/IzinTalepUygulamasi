@@ -39,6 +39,7 @@ try
     builder.Services.AddControllersWithViews();
 
     builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
     builder.Services.AddFluentValidationAutoValidation();
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
     builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

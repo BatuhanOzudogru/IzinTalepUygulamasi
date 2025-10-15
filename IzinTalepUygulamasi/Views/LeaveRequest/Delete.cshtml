@@ -31,7 +31,7 @@
             var leaveRequestId = '@Model.Id';
 
             $.ajax({
-                url: `/LeaveRequest/Delete/${leaveRequestId}`,
+                url: `/LeaveRequest/DeleteConfirmed/${leaveRequestId}`,
                 type: 'DELETE',
                 success: function () {
                     window.location.href = '/LeaveRequest/Index';
