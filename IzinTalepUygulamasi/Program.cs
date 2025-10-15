@@ -40,6 +40,7 @@ try
 
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
+    builder.Services.AddScoped<IManagerService, ManagerService>();
     builder.Services.AddFluentValidationAutoValidation();
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
     builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
