@@ -55,7 +55,7 @@ namespace IzinTalepUygulamasi.Controllers
             }
 
             _logger.LogInformation("Yönetici {ManagerName}, {EmployeeName} adlı çalışana ait {Id} ID'li talebin detaylarını inceliyor.",
-                User.Identity?.Name, leaveRequest.RequestingEmployee.FullName, id);
+                User.Identity?.Name, leaveRequest.EmployeeFullName, id);
 
             return View(leaveRequest);
         }
@@ -115,6 +115,19 @@ namespace IzinTalepUygulamasi.Controllers
             var csvWithBom = bom.Concat(csvBytes).ToArray();
 
             return File(csvWithBom, "text/csv", $"AylikIzinRaporu_{currentYear}_{currentMonth}.csv");
+        }
+
+        private int CalculateBusinessDays(DateTime startDate, DateTime endDate)
+        {
+            int businessDays = 0;
+            for (var currentDate = startDate.Date; currentDate <= endDate.Date; currentDate = currentDate.AddDays(1))
+            {
+                if (currentDate.DayOfWeek != DayOfWeek.Saturday && currentDate.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    businessDays++;
+                }
+            }
+            return businessDays;
         }
     }
 }

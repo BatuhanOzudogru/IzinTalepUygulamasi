@@ -1,5 +1,6 @@
 ﻿using IzinTalepUygulamasi.Data;
 using IzinTalepUygulamasi.Models;
+using IzinTalepUygulamasi.Models.ViewModels;
 using IzinTalepUygulamasi.Services.Abstract;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
@@ -17,7 +18,7 @@ public class ManagerService : IManagerService
         _logger = logger;
     }
 
-    public async Task<IPagedList<LeaveRequest>> GetFilteredPendingRequestsAsync(string? search, LeaveType? leaveTypeFilter, DateTime? startDateFilter, int page, int pageSize)
+    public async Task<IPagedList<LeaveRequestViewModel>> GetFilteredPendingRequestsAsync(string? search, LeaveType? leaveTypeFilter, DateTime? startDateFilter, int page, int pageSize)
     {
         var pendingRequests = _context.LeaveRequests
             .Include(lr => lr.RequestingEmployee)
@@ -40,7 +41,23 @@ public class ManagerService : IManagerService
             pendingRequests = pendingRequests.Where(r => r.StartDate.Date == startDateFilter.Value.Date);
         }
 
-        return pendingRequests.ToPagedList(page, pageSize);
+        var pendingRequestFromDb =  pendingRequests.ToPagedList(page, pageSize);
+        var viewModels = pendingRequestFromDb.Select(lr => new LeaveRequestViewModel
+        {
+            Id = lr.Id,
+            EmployeeFullName = lr.RequestingEmployee.FullName,
+            EmployeeUserName = lr.RequestingEmployee.Username,
+            RequestDate = lr.RequestDate,
+            LeaveType = lr.LeaveType,
+            StartDate = lr.StartDate,
+            EndDate = lr.EndDate,
+            RowVersion = lr.RowVersion,
+            Status = lr.Status,
+            Reason = lr.Reason,
+            NumberOfDays = CalculateBusinessDays(lr.StartDate, lr.EndDate)
+        });
+        var pagedViewModel = new StaticPagedList<LeaveRequestViewModel>(viewModels, pendingRequestFromDb);
+        return pagedViewModel;
     }
 
     public async Task<int> GetApprovedThisMonthCountAsync()
@@ -67,11 +84,31 @@ public class ManagerService : IManagerService
         return mostUsedLeaveType != null ? mostUsedLeaveType.LeaveType.ToString() : "Veri Yok";
     }
 
-    public async Task<LeaveRequest?> GetLeaveRequestWithDetailsAsync(int id)
+    public async Task<LeaveRequestViewModel?> GetLeaveRequestWithDetailsAsync(int id)
     {
-        return await _context.LeaveRequests
-            .Include(lr => lr.RequestingEmployee)
-            .FirstOrDefaultAsync(lr => lr.Id == id);
+        var leaveRequestFromDb = await _context.LeaveRequests
+        .Include(lr => lr.RequestingEmployee)
+        .FirstOrDefaultAsync(lr => lr.Id == id);
+        if (leaveRequestFromDb == null)
+        {
+            return null;
+        }
+
+        var viewModel = new LeaveRequestViewModel
+        {
+            Id = leaveRequestFromDb.Id,
+            EmployeeFullName = leaveRequestFromDb.RequestingEmployee.FullName,
+            EmployeeUserName = leaveRequestFromDb.RequestingEmployee.Username,
+            RequestDate = leaveRequestFromDb.RequestDate,
+            LeaveType = leaveRequestFromDb.LeaveType,
+            StartDate = leaveRequestFromDb.StartDate,
+            EndDate = leaveRequestFromDb.EndDate,
+            RowVersion = leaveRequestFromDb.RowVersion,
+            Status = leaveRequestFromDb.Status,
+            Reason = leaveRequestFromDb.Reason,
+            NumberOfDays = CalculateBusinessDays(leaveRequestFromDb.StartDate, leaveRequestFromDb.EndDate)
+        };
+        return viewModel;
     }
 
     public async Task<string?> ProcessLeaveRequestAsync(int id, string decision, string managerComments, int managerId, string managerName, byte[] rowVersion)
@@ -133,15 +170,26 @@ public class ManagerService : IManagerService
             }
         }
     }
-
+    public static int CalculateBusinessDays(DateTime startDate, DateTime endDate)
+    {
+        int businessDays = 0;
+        for (var currentDate = startDate.Date; currentDate <= endDate.Date; currentDate = currentDate.AddDays(1))
+        {
+            if (currentDate.DayOfWeek != DayOfWeek.Saturday && currentDate.DayOfWeek != DayOfWeek.Sunday)
+            {
+                businessDays++;
+            }
+        }
+        return businessDays;
+    }
     public async Task<List<MonthlyReportItem>> GetMonthlyReportDataAsync(int year, int month)
     {
-        var startDate = new DateTime(year, month, 1);
-        var endDate = startDate.AddMonths(1).AddDays(-1);
+        var reportStartDate = new DateTime(year, month, 1);
+        var reportEndDate = reportStartDate.AddMonths(1).AddDays(-1);
 
         var approvedLeaves = await _context.LeaveRequests
             .Include(lr => lr.RequestingEmployee)
-            .Where(lr => lr.Status == RequestStatus.APPROVED && lr.StartDate <= endDate && lr.EndDate >= startDate)
+            .Where(lr => lr.Status == RequestStatus.APPROVED && lr.StartDate <= reportEndDate && lr.EndDate >= reportStartDate)
             .ToListAsync();
 
         return approvedLeaves
@@ -149,9 +197,14 @@ public class ManagerService : IManagerService
             .Select(g => new MonthlyReportItem
             {
                 Employee = g.Key,
-                TotalDays = g.Sum(l => (l.EndDate - l.StartDate).TotalDays + 1)
+                TotalDays = g.Sum(l =>
+                {
+                    var effectiveStartDate = l.StartDate > reportStartDate ? l.StartDate : reportStartDate;
+                    var effectiveEndDate = l.EndDate < reportEndDate ? l.EndDate : reportEndDate;
+                    return CalculateBusinessDays(effectiveStartDate, effectiveEndDate);
+                })
             })
-            .OrderBy(x => x.Employee.FullName)
-            .ToList();
+        .OrderBy(x => x.Employee.FullName)
+        .ToList();
     }
 }

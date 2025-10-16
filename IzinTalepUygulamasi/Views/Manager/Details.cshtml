@@ -1,5 +1,4 @@
-﻿@model LeaveRequest
-
+﻿@model IzinTalepUygulamasi.Models.ViewModels.LeaveRequestViewModel
 <h1>İzin Talebi Detayları</h1>
 <hr />
 
@@ -7,10 +6,10 @@
     <h4>İzin Talebi Bilgileri</h4>
     <dl class="row">
         <dt class="col-sm-3">Çalışan Adı Soyadı</dt>
-        <dd class="col-sm-9">@Model.RequestingEmployee.FullName</dd>
+        <dd class="col-sm-9">@Model.EmployeeFullName</dd>
 
         <dt class="col-sm-3">Çalışan Kullanıcı Adı</dt>
-        <dd class="col-sm-9">@Model.RequestingEmployee.Username</dd>
+        <dd class="col-sm-9">@Model.EmployeeUserName</dd>
 
         <dt class="col-sm-3">Talep Tarihi</dt>
         <dd class="col-sm-9">@Model.RequestDate.ToString("g")</dd>
@@ -22,7 +21,7 @@
         <dd class="col-sm-9">@Model.StartDate.ToShortDateString() - @Model.EndDate.ToShortDateString()</dd>
 
         <dt class="col-sm-3">Toplam Süre</dt>
-        <dd class="col-sm-9">@((Model.EndDate - Model.StartDate).TotalDays + 1) gün</dd>
+        <dd class="col-sm-9">@Html.DisplayFor(model => model.NumberOfDays) gün</dd>
 
         <dt class="col-sm-3">Çalışanın Açıklaması</dt>
         <dd class="col-sm-9 text-break" style="white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;">@Html.DisplayFor(model => model.Reason)</dd>

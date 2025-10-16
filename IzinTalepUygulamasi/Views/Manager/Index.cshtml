@@ -1,6 +1,6 @@
 ﻿@using X.PagedList
 @using X.PagedList.Mvc.Core
-@model IPagedList<LeaveRequest>
+@model IPagedList<IzinTalepUygulamasi.Models.ViewModels.LeaveRequestViewModel>
 
 <h1>Onay Bekleyen İzin Talepleri</h1>
 
@@ -75,11 +75,11 @@ else
             @foreach (var item in Model)
             {
                 <tr>
-                    <td>@Html.DisplayFor(modelItem => item.RequestingEmployee.FullName)</td>
+                    <td>@Html.DisplayFor(modelItem => item.EmployeeFullName)</td>
                     <td>@item.RequestDate.ToShortDateString()</td>
                     <td>@Html.DisplayFor(modelItem => item.LeaveType)</td>
                     <td>@item.StartDate.ToShortDateString() - @item.EndDate.ToShortDateString()</td>
-                    <td>@((item.EndDate - item.StartDate).TotalDays + 1)</td>
+                    <td>@Html.DisplayFor(modelItem => item.NumberOfDays)</td>
                     <td>@Html.DisplayFor(modelItem => item.Reason)</td>
                     <td>
                         <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">İncele</a>

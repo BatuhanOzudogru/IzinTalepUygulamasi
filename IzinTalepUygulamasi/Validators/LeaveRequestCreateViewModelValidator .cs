@@ -16,10 +16,16 @@ namespace IzinTalepUygulamasi.Validators
 
             RuleFor(x => x.EndDate)
                 .NotEmpty().WithMessage("Bitiş tarihi zorunludur.")
-                .GreaterThanOrEqualTo(x => x.StartDate).WithMessage("Bitiş tarihi, başlangıç tarihinden önce olamaz.");
+                .GreaterThanOrEqualTo(x => x.StartDate).WithMessage("Bitiş tarihi, başlangıç tarihinden önce olamaz.")
+                .Must(isWeekDay).WithMessage("İzin bitiş tarihi bir iş günü olmalıdır (Pazartesi-Cuma).");
 
             RuleFor(x => x.Reason)
                 .MaximumLength(500).WithMessage("Açıklama en fazla 500 karakter olabilir.");
+        }
+
+        private bool isWeekDay(DateTime tarih)
+        {
+            return tarih.DayOfWeek != DayOfWeek.Saturday && tarih.DayOfWeek != DayOfWeek.Sunday;
         }
     }
 }
